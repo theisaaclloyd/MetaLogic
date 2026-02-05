@@ -1,0 +1,5 @@
+out/
+dist/
+rust/
+src/renderer/wasm/
+node_modules/

@@ -1,0 +1,148 @@
+@import 'tailwindcss';
+
+/* Custom theme tokens for Tailwind v4 */
+@theme {
+  --color-wire-zero: #3b82f6;
+  --color-wire-one: #ef4444;
+  --color-wire-hiz: #9ca3af;
+  --color-wire-conflict: #f59e0b;
+  --color-wire-unknown: #8b5cf6;
+  --color-gate-bg: #1f2937;
+  --color-gate-border: #374151;
+  --color-gate-selected: #3b82f6;
+  --color-canvas-bg: #111827;
+  --color-canvas-grid: #1f2937;
+  --color-canvas-dots: #374151;
+}
+
+/* App-wide base styles - must be in @layer base so Tailwind utilities can override */
+@layer base {
+  :root {
+    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+    color: #f9fafb;
+    background-color: #111827;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+}
+
+/* React Flow customizations - must be unlayered to override React Flow's own styles */
+.react-flow__background {
+  background-color: #111827 !important;
+}
+
+.react-flow__node {
+  cursor: grab;
+}
+
+.react-flow__node:active {
+  cursor: grabbing;
+}
+
+.react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.react-flow__controls {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+}
+
+.react-flow__controls-button {
+  background: #374151 !important;
+  border-bottom: 1px solid #4b5563 !important;
+  color: #f9fafb !important;
+  fill: #f9fafb !important;
+}
+
+.react-flow__controls-button:hover {
+  background: #4b5563 !important;
+}
+
+.react-flow__minimap {
+  background: #1f2937 !important;
+  border-radius: 4px;
+}
+
+/* Wire state colors */
+.wire-zero {
+  stroke: #3b82f6;
+}
+.wire-one {
+  stroke: #ef4444;
+}
+.wire-hiz {
+  stroke: #9ca3af;
+  stroke-dasharray: 5, 5;
+}
+.wire-conflict {
+  stroke: #f59e0b;
+  stroke-width: 3;
+}
+.wire-unknown {
+  stroke: #8b5cf6;
+  stroke-dasharray: 2, 2;
+}
+
+/* Handle tooltips */
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  white-space: nowrap;
+  background: #1f2937;
+  color: #e5e7eb;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms;
+  z-index: 50;
+  border: 1px solid #374151;
+}
+
+.handle-tooltip-left[data-tooltip]::after {
+  right: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.handle-tooltip-right[data-tooltip]::after {
+  left: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}

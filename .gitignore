@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+
+# Build output
+out/
+dist/
+*.tgz
+
+# Rust / WASM
+rust/target/
+rust/pkg/
+src/renderer/wasm/
+
+# Electron Forge
+.webpack/
+.vite/
+
+# Code coverage
+coverage/
+*.lcov
+
+# Logs
+logs/
+*.log
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Environment files
+.env
+.env.*.local
+
+# Caches
+.eslintcache
+.cache/
+*.tsbuildinfo
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Test
+test-results/
+playwright-report/
+blob-report/
+
+# Temporary
+tmp/
+temp/
