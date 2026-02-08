@@ -48,6 +48,72 @@ const GATE_CATEGORIES: GateCategory[] = [
       },
       { type: 'JK_FLIPFLOP', label: 'JK-FF', description: 'JK flip-flop - versatile flip-flop' }
     ]
+  },
+  {
+    name: 'Multiplexers',
+    gates: [
+      { type: 'MUX_2TO1', label: 'Mux 2:1', description: '2-to-1 multiplexer' },
+      { type: 'MUX_4TO1', label: 'Mux 4:1', description: '4-to-1 multiplexer' },
+      { type: 'MUX_8TO1', label: 'Mux 8:1', description: '8-to-1 multiplexer' },
+      { type: 'DEMUX_1TO2', label: 'Demux 1:2', description: '1-to-2 demultiplexer' },
+      { type: 'DEMUX_1TO4', label: 'Demux 1:4', description: '1-to-4 demultiplexer' }
+    ]
+  },
+  {
+    name: 'Decoders/Encoders',
+    gates: [
+      { type: 'DECODER_2TO4', label: 'Dec 2:4', description: '2-to-4 decoder with enable' },
+      { type: 'DECODER_3TO8', label: 'Dec 3:8', description: '3-to-8 decoder with enable' },
+      { type: 'ENCODER_4TO2', label: 'Enc 4:2', description: '4-to-2 priority encoder' },
+      { type: 'ENCODER_8TO3', label: 'Enc 8:3', description: '8-to-3 priority encoder' }
+    ]
+  },
+  {
+    name: 'Arithmetic',
+    gates: [
+      { type: 'FULL_ADDER', label: 'Full Adder', description: '1-bit full adder (A+B+Cin)' },
+      { type: 'ADDER_4BIT', label: '4-bit Adder', description: '4-bit ripple-carry adder' },
+      {
+        type: 'COMPARATOR_1BIT',
+        label: '1-bit Comp',
+        description: '1-bit magnitude comparator (cascadable)'
+      },
+      { type: 'COMPARATOR_4BIT', label: '4-bit Comp', description: '4-bit magnitude comparator' }
+    ]
+  },
+  {
+    name: 'Registers',
+    gates: [
+      {
+        type: 'REGISTER_4BIT',
+        label: '4-bit Reg',
+        description: '4-bit register with load and clear'
+      },
+      {
+        type: 'REGISTER_8BIT',
+        label: '8-bit Reg',
+        description: '8-bit register with load and clear'
+      },
+      {
+        type: 'SHIFT_REG_4BIT',
+        label: 'Shift Reg',
+        description: '4-bit bidirectional shift register'
+      },
+      {
+        type: 'COUNTER_4BIT',
+        label: '4-bit Counter',
+        description: '4-bit up/down counter with parallel load'
+      }
+    ]
+  },
+  {
+    name: 'Memory',
+    gates: [
+      { type: 'RAM_16X4', label: 'RAM 16x4', description: '16-address x 4-bit RAM' },
+      { type: 'RAM_16X8', label: 'RAM 16x8', description: '16-address x 8-bit RAM' },
+      { type: 'ROM_16X4', label: 'ROM 16x4', description: '16-address x 4-bit ROM' },
+      { type: 'ROM_16X8', label: 'ROM 16x8', description: '16-address x 8-bit ROM' }
+    ]
   }
 ]
 

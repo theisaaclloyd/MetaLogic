@@ -93,7 +93,36 @@ const GATE_CONFIGS: Record<string, { inputs: number; outputs: number; label: str
   PULSE: { inputs: 0, outputs: 1, label: 'PLS' },
   LED: { inputs: 1, outputs: 0, label: 'LED' },
   D_FLIPFLOP: { inputs: 2, outputs: 2, label: 'D-FF' },
-  JK_FLIPFLOP: { inputs: 3, outputs: 2, label: 'JK-FF' }
+  JK_FLIPFLOP: { inputs: 3, outputs: 2, label: 'JK-FF' },
+  // Multiplexers
+  MUX_2TO1: { inputs: 3, outputs: 1, label: 'MUX 2:1' },
+  MUX_4TO1: { inputs: 6, outputs: 1, label: 'MUX 4:1' },
+  MUX_8TO1: { inputs: 11, outputs: 1, label: 'MUX 8:1' },
+  // Demultiplexers
+  DEMUX_1TO2: { inputs: 2, outputs: 2, label: 'DEMUX 1:2' },
+  DEMUX_1TO4: { inputs: 3, outputs: 4, label: 'DEMUX 1:4' },
+  // Decoders
+  DECODER_2TO4: { inputs: 3, outputs: 4, label: 'DEC 2:4' },
+  DECODER_3TO8: { inputs: 4, outputs: 8, label: 'DEC 3:8' },
+  // Encoders
+  ENCODER_4TO2: { inputs: 4, outputs: 3, label: 'ENC 4:2' },
+  ENCODER_8TO3: { inputs: 8, outputs: 4, label: 'ENC 8:3' },
+  // Arithmetic
+  FULL_ADDER: { inputs: 3, outputs: 2, label: 'FA' },
+  ADDER_4BIT: { inputs: 9, outputs: 6, label: 'ADD4' },
+  // Comparators
+  COMPARATOR_1BIT: { inputs: 5, outputs: 3, label: 'CMP1' },
+  COMPARATOR_4BIT: { inputs: 11, outputs: 3, label: 'CMP4' },
+  // Registers
+  REGISTER_4BIT: { inputs: 7, outputs: 4, label: 'REG4' },
+  REGISTER_8BIT: { inputs: 11, outputs: 8, label: 'REG8' },
+  SHIFT_REG_4BIT: { inputs: 5, outputs: 5, label: 'SREG4' },
+  COUNTER_4BIT: { inputs: 9, outputs: 5, label: 'CNT4' },
+  // Memory
+  RAM_16X4: { inputs: 10, outputs: 4, label: 'RAM' },
+  RAM_16X8: { inputs: 14, outputs: 8, label: 'RAM' },
+  ROM_16X4: { inputs: 5, outputs: 4, label: 'ROM' },
+  ROM_16X8: { inputs: 5, outputs: 8, label: 'ROM' }
 }
 
 let nodeIdCounter = 1

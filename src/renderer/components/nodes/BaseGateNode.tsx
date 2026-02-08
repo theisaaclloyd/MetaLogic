@@ -107,7 +107,10 @@ export const GateNodeComponent = memo(function GateNode({ id, data, selected }: 
         ${isInteractive ? 'cursor-pointer hover:border-blue-400' : ''}
         ${isInput ? 'bg-green-900' : isOutput ? 'bg-red-900' : 'bg-gray-800'}
       `}
-      style={{ minWidth: hasSymbol ? 80 : 60, minHeight: hasSymbol ? 60 : 50 }}
+      style={{
+        minWidth: hasSymbol ? 80 : 60,
+        minHeight: Math.max(hasSymbol ? 60 : 50, Math.max(data.inputCount, data.outputCount) * 20)
+      }}
       onClick={isInteractive ? handleClick : undefined}
     >
       {inputHandles}

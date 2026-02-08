@@ -13,6 +13,13 @@ function msToSlider(ms: number): number {
   return (Math.log10(ms) / 3) * 100
 }
 
+function formatTime(t: number): string {
+  if (t < 10000) return String(t)
+  if (t < 1_000_000) return (t / 1000).toPrecision(4).replace(/\.?0+$/, '') + 'K'
+  if (t < 1_000_000_000) return (t / 1_000_000).toPrecision(4).replace(/\.?0+$/, '') + 'M'
+  return (t / 1_000_000_000).toPrecision(4).replace(/\.?0+$/, '') + 'B'
+}
+
 export function SimulationControls() {
   const { status, currentTime, msPerTick, setMsPerTick, run, pause, step, reset } =
     useSimulationStore()
@@ -109,7 +116,7 @@ export function SimulationControls() {
       </div>
 
       {/* Time Display */}
-      <div className="ml-2 text-xs text-gray-400">t={currentTime}</div>
+      <div className="ml-2 text-xs text-gray-400 w-16 text-right tabular-nums">t={formatTime(currentTime)}</div>
     </div>
   )
 }
