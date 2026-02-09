@@ -16,7 +16,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "typecheck": "tsc --noEmit",
-    "fix": "bun run lint:fix && bun run format && bun run lint && bun run typecheck",
+    "laundry": "bun run lint:fix && bun run format && bun run lint && bun run typecheck",
     "test": "vitest",
     "build:wasm": "cd rust && wasm-pack build --target web --out-dir ../src/renderer/wasm"
   },

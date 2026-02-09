@@ -210,7 +210,7 @@ Output goes to `dist/make/`.
 ┌──────────────────────────────────────────────┐
 │              Main Thread                     │
 │                                              │
-│   React UI ←→ Zustand Stores ←→ React Flow  │
+│   React UI ←→ Zustand Stores ←→ React Flow   │
 │       │                                      │
 │       │ postMessage                          │
 │       ▼                                      │
