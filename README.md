@@ -5,10 +5,14 @@
 <h1 align="center">MetaLogic</h1>
 
 <p align="center">
-  A modern, cross-platform digital logic simulator inspired by <a href="http://cedarlogic.com/">CedarLogic</a>.
+  A modern, cross-platform digital logic simulator inspired by <a href="https://github.com/CedarvilleCS/CedarLogic/">CedarLogic</a>.
 </p>
 
-
+<p align="center">
+  <a href="https://github.com/theisaaclloyd/MetaLogic/actions/workflows/release.yml"><img src="https://github.com/theisaaclloyd/MetaLogic/actions/workflows/release.yml/badge.svg" alt="Build & Release"></a>
+  <a href="https://github.com/theisaaclloyd/MetaLogic/releases/latest"><img src="https://img.shields.io/github/v/release/theisaaclloyd/MetaLogic?label=latest" alt="Latest Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/theisaaclloyd/MetaLogic" alt="License"></a>
+</p>
 
 ---
 
@@ -29,12 +33,23 @@
 Grab the latest build for your platform from the [Releases](https://github.com/theisaaclloyd/MetaLogic/releases/latest) page.
 
 | Platform | Architecture | Format |
-|----------|-------------|--------|
+| - | - | - |
 | macOS | ARM64 (Apple Silicon) | `.zip` |
 | Linux | x64 | `.deb`, `.rpm` |
 | Linux | ARM64 | `.deb`, `.rpm` |
 | Windows | x64 | `.exe` |
 | Windows | ARM64 | `.exe` |
+
+> [NOTE]
+> **macOS:** The app is not code-signed (as a broke college student, I don't have $99 a year to afford an Apple Developer Cert), so macOS will show "damaged and can't be opened." After extracting the zip, run the following in Terminal to remove the quarantine flag:
+>
+> ```bash
+> xattr -cr /path/to/MetaLogic.app
+> ```
+>
+> **Windows:** SmartScreen may warn "Windows protected your PC." Click **More info** then **Run anyway** to proceed with the installation.
+>
+> If you would rather not download from GitHub and use this workaround, you can also build from source by following the instructions in the Development section below.
 
 ## Components
 
@@ -54,32 +69,35 @@ Buffer, Tri-State Buffer
 <summary><strong>Inputs</strong></summary>
 
 | Component | Description |
-|-----------|-------------|
+| - | - |
 | Toggle Switch | Manual on/off control |
 | Clock | Configurable periodic signal generator |
 | Pulse Button | Momentary pulse |
 | Keypad | 4-bit output (0-15) |
+
 </details>
 
 <details>
 <summary><strong>Outputs</strong></summary>
 
 | Component | Description |
-|-----------|-------------|
+| - | - |
 | LED | Visual state indicator |
 | 1-Digit Display | Decimal display (4-bit input) |
 | 2-Digit Display | Decimal display (8-bit input) |
+
 </details>
 
 <details>
 <summary><strong>Flip-Flops</strong></summary>
 
 | Component | Description |
-|-----------|-------------|
+| - | - |
 | D Flip-Flop | Edge-triggered D-type |
 | D Flip-Flop (S/R) | D-type with async set/reset |
 | JK Flip-Flop | Edge-triggered JK-type |
 | JK Flip-Flop (S/R) | JK-type with async set/reset |
+
 </details>
 
 <details>
@@ -98,18 +116,19 @@ Decoder 2:4, Decoder 3:8, Priority Encoder 4:2, Priority Encoder 8:3
 <summary><strong>Arithmetic</strong></summary>
 
 | Component | Description |
-|-----------|-------------|
+| - | - |
 | Full Adder | 1-bit with carry |
 | 4-Bit Adder | Ripple-carry |
 | 1-Bit Comparator | Cascadable (A>B, A=B, A<B) |
 | 4-Bit Comparator | Cascadable |
+
 </details>
 
 <details>
 <summary><strong>Memory & Registers</strong></summary>
 
 | Component | Description |
-|-----------|-------------|
+| - | - |
 | 4-Bit Register | Parallel load |
 | 8-Bit Register | Parallel load |
 | 4-Bit Shift Register | Bidirectional (left/right) |
@@ -118,12 +137,13 @@ Decoder 2:4, Decoder 3:8, Priority Encoder 4:2, Priority Encoder 8:3
 | RAM 16x8 | 16-address, 8-bit writable memory |
 | ROM 16x4 | 16-address, 4-bit read-only memory |
 | ROM 16x8 | 16-address, 8-bit read-only memory |
+
 </details>
 
 ## Keyboard Shortcuts
 
 | Shortcut | Action |
-|----------|--------|
+| - | - |
 | `Ctrl/Cmd + N` | New circuit |
 | `Ctrl/Cmd + O` | Open circuit |
 | `Ctrl/Cmd + S` | Save circuit |
@@ -140,7 +160,7 @@ Decoder 2:4, Decoder 3:8, Priority Encoder 4:2, Priority Encoder 8:3
 ## File Formats
 
 | Format | Extension | Description |
-|--------|-----------|-------------|
+| - | - | - |
 | MetaLogic | `.mlc` | Native JSON-based format (lossless) |
 | CedarLogic | `.cdl` | XML import/export for legacy compatibility |
 | Memory dump | `.cdm` | Hex address:data pairs for RAM/ROM |
@@ -163,14 +183,14 @@ bun install
 ### Commands
 
 | Command | Description |
-|---------|-------------|
+| - | - |
 | `bun run dev` | Start in development mode |
 | `bun run build` | Build for production |
 | `bun run make` | Create platform distributables |
 | `bun run lint` | Run ESLint |
 | `bun run typecheck` | TypeScript type checking |
 | `bun run test` | Run tests |
-| `bun run fix` | Auto-fix lint + format + typecheck |
+| `bun run laundry` | Auto-fix lint + format + typecheck |
 
 ### Cross-Platform Builds
 
@@ -186,11 +206,11 @@ Output goes to `dist/make/`.
 
 ## Architecture
 
-```
+``` txt
 ┌──────────────────────────────────────────────┐
 │              Main Thread                     │
 │                                              │
-│   React UI ←→ Zustand Stores ←→ React Flow  │
+│   React UI ←→ Zustand Stores ←→ React Flow   │
 │       │                                      │
 │       │ postMessage                          │
 │       ▼                                      │
@@ -211,7 +231,7 @@ Output goes to `dist/make/`.
 ## Tech Stack
 
 | Layer | Technology |
-|-------|------------|
+| - | - |
 | Framework | Electron 40 |
 | UI | React 19, Tailwind CSS 4 |
 | Canvas | React Flow (@xyflow/react) |
@@ -237,7 +257,7 @@ Planned features for upcoming releases:
 1. Fork the repository
 2. Create a feature branch from `dev`
 3. Make your changes
-4. Run `bun run fix` to lint, format, and typecheck
+4. Run `bun run laundry` to lint, format, and typecheck
 5. Open a pull request to `dev`
 
 Releases are cut by merging `dev` into `main` and pushing a version tag (`v*`).
