@@ -68,14 +68,6 @@ jobs:
         if: matrix.platform == 'linux'
         run: sudo apt-get update && sudo apt-get install -y rpm
 
-      # Linux ARM64: install cross-compilation dependencies
-      - name: Install ARM64 cross-compilation deps
-        if: matrix.platform == 'linux' && matrix.arch == 'arm64'
-        run: |
-          sudo dpkg --add-architecture arm64
-          sudo apt-get update
-          sudo apt-get install -y libc6-dev-arm64-cross
-
       - name: Build (${{ matrix.platform }}-${{ matrix.arch }})
         run: bun run make -- --arch=${{ matrix.arch }} --platform=${{ matrix.platform }}
 

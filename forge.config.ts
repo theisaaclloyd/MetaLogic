@@ -41,6 +41,7 @@ const config: ForgeConfig = {
   makers: [
     new MakerSquirrel({
       name: 'MetaLogic',
+      authors: 'Isaac Lloyd',
       setupIcon: './assets/icon.ico'
     }),
     new MakerZIP({}, ['darwin']),
@@ -62,6 +63,7 @@ const config: ForgeConfig = {
           name: 'metalogic',
           productName: 'MetaLogic',
           genericName: 'Digital Logic Simulator',
+          license: 'MIT',
           categories: ['Education', 'Science'],
           icon: './assets/icon.png'
         }
