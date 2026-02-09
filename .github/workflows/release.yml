@@ -73,6 +73,19 @@ jobs:
       - name: Build (${{ matrix.platform }}-${{ matrix.arch }})
         run: bun run make -- --arch=${{ matrix.arch }} --platform=${{ matrix.platform }}
 
+      # Windows: rename artifacts to include arch (both x64 and arm64 produce identical filenames)
+      - name: Deduplicate Windows artifact names
+        if: matrix.platform == 'win32'
+        shell: bash
+        run: |
+          find dist/make -name "RELEASES" -delete
+          find dist/make -name "*.exe" | while IFS= read -r f; do
+            mv "$f" "$(echo "$f" | sed "s/ Setup/-${{ matrix.arch }}-Setup/")"
+          done
+          find dist/make -name "*.nupkg" | while IFS= read -r f; do
+            mv "$f" "$(echo "$f" | sed "s/-full\.nupkg/-${{ matrix.arch }}-full.nupkg/")"
+          done
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
