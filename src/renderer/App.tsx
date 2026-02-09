@@ -4,9 +4,17 @@ import { CircuitCanvas } from './components/canvas/CircuitCanvas'
 import { GatePalette } from './components/panels/GatePalette'
 import { SimulationControls } from './components/panels/SimulationControls'
 import { PropertiesPanel } from './components/panels/PropertiesPanel'
-import { useCircuitStore } from './stores/circuitStore'
+import { MemoryEditorModal } from './components/panels/MemoryEditorModal'
+import { ToastContainer } from './components/ui/ToastContainer'
+import {
+  useCircuitStore,
+  type GateNodeData,
+  type LabelConnectorNodeData
+} from './stores/circuitStore'
 import { useSimulationStore } from './stores/simulationStore'
 import { useHistoryStore } from './stores/historyStore'
+import { useToastStore } from './stores/toastStore'
+import { synthesizeLabelConnectorWires } from './simulation/core/LabelConnectorResolver'
 import {
   StateType,
   type GateState,
@@ -37,6 +45,8 @@ function App() {
 
   const { pushState, undo, redo, clear: clearHistory } = useHistoryStore()
 
+  const addToast = useToastStore((s) => s.addToast)
+
   // Initialize Web Worker
   useEffect(() => {
     const worker = new Worker(new URL('./workers/simulation.worker.ts', import.meta.url), {
@@ -55,7 +65,7 @@ function App() {
           setCurrentTime(response.time)
           // Update gate states in store
           for (const gate of response.gates) {
-            updateGateState(gate.id, gate.inputStates, gate.outputStates)
+            updateGateState(gate.id, gate.inputStates, gate.outputStates, gate.internalState)
           }
           // Update wire states in store
           for (const wire of response.wires) {
@@ -82,11 +92,17 @@ function App() {
   // NOT when simulation state updates arrive (which would cause infinite re-init loop)
   const topologyKey = useMemo(() => {
     const nodeKeys = nodes
-      .map((n) => `${n.id}:${n.data.type}`)
+      .map((n) => {
+        if (n.type === 'label-connector') {
+          const lcData = n.data as LabelConnectorNodeData
+          return `${n.id}:lc:${lcData.label}:${lcData.isOutput}`
+        }
+        return `${n.id}:${(n.data as GateNodeData).type}`
+      })
       .sort()
       .join('|')
     const edgeKeys = edges
-      .map((e) => `${e.id}:${e.source}:${e.sourceHandle}:${e.target}:${e.targetHandle}`)
+      .map((e) => `${e.id}:${e.source}:${e.sourceHandle}:${e.target}:${e.targetHandle}:${e.type}`)
       .sort()
       .join('|')
     return `${nodeKeys}||${edgeKeys}`
@@ -105,16 +121,24 @@ function App() {
 
     const worker = workerRef.current
 
+    // Filter out label-connector nodes (they aren't simulation gates)
+    const gateNodes = nodes.filter((n) => n.type !== 'label-connector')
+    // Filter out label-link edges (not real signal wires)
+    const signalEdges = edges.filter((e) => e.type !== 'label-link')
+
+    // Synthesize virtual wires from label connectors
+    const synthesizedWires = synthesizeLabelConnectorWires(nodes, edges)
+
     // Helper to build gate/wire state
-    const makeGate = (node: (typeof nodes)[number]): GateState => ({
+    const makeGate = (node: (typeof gateNodes)[number]): GateState => ({
       id: node.id,
-      type: node.data.type,
-      inputStates: node.data.inputStates,
-      outputStates: node.data.outputStates,
-      internalState: node.data.params
+      type: (node.data as GateNodeData).type,
+      inputStates: (node.data as GateNodeData).inputStates,
+      outputStates: (node.data as GateNodeData).outputStates,
+      internalState: (node.data as GateNodeData).params
     })
 
-    const makeWire = (edge: (typeof edges)[number]): WireState => ({
+    const makeWire = (edge: (typeof signalEdges)[number]): WireState => ({
       id: edge.id,
       state: edge.data?.state ?? StateType.UNKNOWN,
       sourceGateId: edge.source,
@@ -126,14 +150,17 @@ function App() {
     if (forceFullInitRef.current) {
       // Full init for first render, newCircuit, loadCircuit
       forceFullInitRef.current = false
-      const gates = nodes.map(makeGate)
-      const wires = edges.map(makeWire)
+      const gates = gateNodes.map(makeGate)
+      const wires = [...signalEdges.map(makeWire), ...synthesizedWires]
       worker.postMessage({ type: 'init', gates, wires })
     } else {
       // Diff-based incremental update
-      const currentNodes = new Map(nodes.map((n) => [n.id, n.data.type]))
+      const currentNodes = new Map(gateNodes.map((n) => [n.id, (n.data as GateNodeData).type]))
       const currentEdges = new Map(
-        edges.map((e) => [e.id, `${e.source}:${e.sourceHandle}:${e.target}:${e.targetHandle}`])
+        signalEdges.map((e) => [
+          e.id,
+          `${e.source}:${e.sourceHandle}:${e.target}:${e.targetHandle}`
+        ])
       )
 
       // Find removed edges first (must remove before removing nodes)
@@ -151,24 +178,32 @@ function App() {
       }
 
       // Find added nodes (must add before adding edges)
-      for (const node of nodes) {
+      for (const node of gateNodes) {
         if (!prevNodesRef.current.has(node.id)) {
           worker.postMessage({ type: 'addGate', gate: makeGate(node) })
         }
       }
 
       // Find added edges
-      for (const edge of edges) {
+      for (const edge of signalEdges) {
         if (!prevEdgesRef.current.has(edge.id)) {
           worker.postMessage({ type: 'addWire', wire: makeWire(edge) })
         }
       }
+
+      // For synthesized wires, always do a full re-init when topology changes
+      // This handles label connector changes properly
+      if (synthesizedWires.length > 0) {
+        const gates = gateNodes.map(makeGate)
+        const wires = [...signalEdges.map(makeWire), ...synthesizedWires]
+        worker.postMessage({ type: 'init', gates, wires })
+      }
     }
 
-    // Update refs for next diff
-    prevNodesRef.current = new Map(nodes.map((n) => [n.id, n.data.type]))
+    // Update refs for next diff (only gate nodes and signal edges)
+    prevNodesRef.current = new Map(gateNodes.map((n) => [n.id, (n.data as GateNodeData).type]))
     prevEdgesRef.current = new Map(
-      edges.map((e) => [e.id, `${e.source}:${e.sourceHandle}:${e.target}:${e.targetHandle}`])
+      signalEdges.map((e) => [e.id, `${e.source}:${e.sourceHandle}:${e.target}:${e.targetHandle}`])
     )
   }, [topologyKey, nodes, edges])
 
@@ -192,11 +227,34 @@ function App() {
         loadCircuit(result.circuit, result.filePath)
         clearHistory()
         reset()
+
+        // Show parse warnings as toasts
+        if (result.warnings && result.warnings.length > 0) {
+          for (const w of result.warnings) {
+            switch (w.type) {
+              case 'import_info':
+                addToast('info', w.message)
+                break
+              case 'unsupported_gate':
+                addToast('warning', w.message)
+                break
+              case 'approximate_mapping':
+                addToast('warning', w.message)
+                break
+              case 'label_conflict':
+                addToast('warning', w.message)
+                break
+              default:
+                addToast('warning', w.message)
+            }
+          }
+        }
       }
     } catch (error) {
       console.error('[App] handleOpen failed:', error)
+      addToast('error', `Failed to open file: ${String(error)}`)
     }
-  }, [loadCircuit, clearHistory, reset])
+  }, [loadCircuit, clearHistory, reset, addToast])
 
   const handleSaveAs = useCallback(async () => {
     if (!window.electron) {
@@ -210,11 +268,13 @@ function App() {
       if (result?.success && result.filePath) {
         setFilePath(result.filePath)
         setDirty(false)
+        addToast('success', `Saved as ${result.filePath.split('/').pop()}`)
       }
     } catch (error) {
       console.error('[App] handleSaveAs failed:', error)
+      addToast('error', `Failed to save: ${String(error)}`)
     }
-  }, [getCircuitData, setFilePath, setDirty])
+  }, [getCircuitData, setFilePath, setDirty, addToast])
 
   const handleSave = useCallback(async () => {
     if (!window.electron) {
@@ -228,14 +288,16 @@ function App() {
         const result = await window.electron.file.save({ filePath: currentFilePath, circuit })
         if (result.success) {
           setDirty(false)
+          addToast('success', `Saved ${currentFilePath.split('/').pop()}`)
         }
       } else {
         await handleSaveAs()
       }
     } catch (error) {
       console.error('[App] handleSave failed:', error)
+      addToast('error', `Failed to save: ${String(error)}`)
     }
-  }, [currentFilePath, getCircuitData, setDirty, handleSaveAs])
+  }, [currentFilePath, getCircuitData, setDirty, handleSaveAs, addToast])
 
   const handleUndo = useCallback(() => {
     const entry = undo()
@@ -364,6 +426,12 @@ function App() {
 
       {/* Right Panel - Properties */}
       <PropertiesPanel />
+
+      {/* Memory Editor Modal */}
+      <MemoryEditorModal />
+
+      {/* Toast Notifications */}
+      <ToastContainer />
     </div>
   )
 }

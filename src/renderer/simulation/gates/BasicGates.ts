@@ -331,6 +331,49 @@ export class PulseGate extends Gate {
 }
 
 /**
+ * Display Gate - shows decimal value of binary inputs (1-digit or 2-digit)
+ */
+export class DisplayGate extends Gate {
+  constructor(id: IDType, type: 'DISPLAY_1D' | 'DISPLAY_2D', bitWidth: number) {
+    super({ id, type, inputCount: bitWidth, outputCount: 0, delay: 0 })
+  }
+
+  evaluate(): GateEvaluationResult {
+    return { outputs: [], delay: 0 }
+  }
+}
+
+/**
+ * Keypad Gate - user-controlled 4-bit output via button grid
+ */
+export class KeypadGate extends Gate {
+  constructor(id: IDType) {
+    super({ id, type: 'KEYPAD', inputCount: 0, outputCount: 4, delay: 0 })
+    this.internalState = { value: 0 }
+  }
+
+  evaluate(): GateEvaluationResult {
+    const value = (this.internalState['value'] as number) ?? 0
+    const outputs: StateType[] = []
+    for (let i = 0; i < 4; i++) {
+      outputs.push((value >> i) & 1 ? StateType.ONE : StateType.ZERO)
+    }
+    for (let i = 0; i < 4; i++) {
+      this.setOutput(i, outputs[i]!)
+    }
+    return { outputs, delay: 0 }
+  }
+
+  setValue(value: number): void {
+    this.internalState['value'] = Math.max(0, Math.min(15, value))
+  }
+
+  protected override onReset(): void {
+    this.internalState = { value: 0 }
+  }
+}
+
+/**
  * LED Output - displays state visually
  */
 export class LedGate extends Gate {
@@ -379,6 +422,12 @@ export function createGate(type: string, id: IDType, config?: GateConfig): Gate 
       return new PulseGate(id, (config?.params?.['duration'] as number) ?? 1)
     case 'LED':
       return new LedGate(id)
+    case 'DISPLAY_1D':
+      return new DisplayGate(id, 'DISPLAY_1D', 4)
+    case 'DISPLAY_2D':
+      return new DisplayGate(id, 'DISPLAY_2D', 8)
+    case 'KEYPAD':
+      return new KeypadGate(id)
     default:
       throw new Error(`Unknown gate type: ${type}`)
   }

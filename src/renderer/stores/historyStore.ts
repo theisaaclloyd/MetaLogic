@@ -1,9 +1,9 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
-import type { GateNode, WireEdge } from './circuitStore'
+import type { CircuitNode, WireEdge } from './circuitStore'
 
 interface HistoryEntry {
-  nodes: GateNode[]
+  nodes: CircuitNode[]
   edges: WireEdge[]
   timestamp: number
 }
@@ -14,7 +14,7 @@ interface HistoryState {
   maxHistory: number
 
   // Actions
-  pushState: (nodes: GateNode[], edges: WireEdge[]) => void
+  pushState: (nodes: CircuitNode[], edges: WireEdge[]) => void
   undo: () => HistoryEntry | null
   redo: () => HistoryEntry | null
   clear: () => void

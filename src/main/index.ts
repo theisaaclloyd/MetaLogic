@@ -142,7 +142,7 @@ function createWindow(): void {
               type: 'info',
               title: 'About MetaLogic',
               message: 'MetaLogic Digital Logic Simulator',
-              detail: 'Version 1.0.0\nA modern digital logic simulator.'
+              detail: 'Version 0.1.0\nA modern digital logic simulator.'
             })
           }
         }

@@ -14,6 +14,9 @@ export const HANDLE_LABELS: Record<string, { inputs: string[]; outputs: string[]
   CLOCK: { inputs: [], outputs: ['CLK'] },
   PULSE: { inputs: [], outputs: ['Output'] },
   LED: { inputs: ['Input'], outputs: [] },
+  DISPLAY_1D: { inputs: ['D0', 'D1', 'D2', 'D3'], outputs: [] },
+  DISPLAY_2D: { inputs: ['D0', 'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7'], outputs: [] },
+  KEYPAD: { inputs: [], outputs: ['D0', 'D1', 'D2', 'D3'] },
   // Multiplexers
   MUX_2TO1: { inputs: ['D0', 'D1', 'Sel'], outputs: ['Y'] },
   MUX_4TO1: { inputs: ['D0', 'D1', 'D2', 'D3', 'Sel0', 'Sel1'], outputs: ['Y'] },
@@ -72,9 +75,20 @@ export const HANDLE_LABELS: Record<string, { inputs: string[]; outputs: string[]
   },
   RAM_16X8: {
     inputs: [
-      'A0', 'A1', 'A2', 'A3',
-      'DIN0', 'DIN1', 'DIN2', 'DIN3', 'DIN4', 'DIN5', 'DIN6', 'DIN7',
-      'WE', 'CLK'
+      'A0',
+      'A1',
+      'A2',
+      'A3',
+      'DIN0',
+      'DIN1',
+      'DIN2',
+      'DIN3',
+      'DIN4',
+      'DIN5',
+      'DIN6',
+      'DIN7',
+      'WE',
+      'CLK'
     ],
     outputs: ['DOUT0', 'DOUT1', 'DOUT2', 'DOUT3', 'DOUT4', 'DOUT5', 'DOUT6', 'DOUT7']
   },

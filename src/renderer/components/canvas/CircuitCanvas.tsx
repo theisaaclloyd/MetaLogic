@@ -11,24 +11,50 @@ import {
   ConnectionLineType,
   BackgroundVariant,
   PanelPosition,
-  useReactFlow
+  useReactFlow,
+  type Node
 } from '@xyflow/react'
-import { useCircuitStore, type GateNode } from '../../stores/circuitStore'
+import { useCircuitStore, type CircuitNode, type GateNodeData } from '../../stores/circuitStore'
+import { useMemoryEditorStore } from '../../stores/memoryEditorStore'
 import { GateNodeComponent } from '../nodes/BaseGateNode'
+import { LabelConnectorNodeComponent } from '../nodes/LabelConnectorNode'
 import { WireEdge as WireEdgeComponent } from '../edges/WireEdge'
+import { LabelLinkEdge } from '../edges/LabelLinkEdge'
 
 const nodeTypes: NodeTypes = {
-  gate: GateNodeComponent
+  gate: GateNodeComponent,
+  'label-connector': LabelConnectorNodeComponent
 }
 
 const edgeTypes: EdgeTypes = {
-  wire: WireEdgeComponent
+  wire: WireEdgeComponent,
+  'label-link': LabelLinkEdge
 }
+
+const MEMORY_TYPES = new Set(['RAM_16X4', 'RAM_16X8', 'ROM_16X4', 'ROM_16X8'])
 
 export function CircuitCanvas() {
   const reactFlow = useReactFlow()
-  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addGate, setSelection } =
-    useCircuitStore()
+  const {
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+    addGate,
+    addLabelConnector,
+    setSelection
+  } = useCircuitStore()
+  const openEditor = useMemoryEditorStore((s) => s.openEditor)
+
+  const handleNodeDoubleClick = useCallback(
+    (_event: React.MouseEvent, node: CircuitNode) => {
+      if (node.type === 'gate' && MEMORY_TYPES.has((node.data as GateNodeData).type)) {
+        openEditor(node.id)
+      }
+    },
+    [openEditor]
+  )
 
   const handleSelectionChange = useCallback(
     (params: OnSelectionChangeParams) => {
@@ -48,28 +74,34 @@ export function CircuitCanvas() {
     (event: React.DragEvent) => {
       event.preventDefault()
 
-      const gateType = event.dataTransfer.getData('application/metalogic-gate')
-      if (!gateType) return
-
-      // Get the position relative to the canvas
-      // const reactFlowBounds = event.currentTarget.getBoundingClientRect()
-      // const position = {
-      //   x: event.clientX - reactFlowBounds.left,
-      //   y: event.clientY - reactFlowBounds.top
-      // }
-
       const position = reactFlow.screenToFlowPosition({
         x: event.clientX,
         y: event.clientY
       })
 
-      addGate(gateType, position)
+      // Check for label connector drop
+      const lcType = event.dataTransfer.getData('application/metalogic-label-connector')
+      if (lcType) {
+        const isOutput = lcType === 'LABEL_OUT'
+        addLabelConnector('A', isOutput, position)
+        return
+      }
+
+      // Check for gate drop
+      const gateType = event.dataTransfer.getData('application/metalogic-gate')
+      if (gateType) {
+        addGate(gateType, position)
+      }
     },
-    [addGate, reactFlow]
+    [addGate, addLabelConnector, reactFlow]
   )
 
-  const minimapNodeColor = useCallback((node: GateNode) => {
-    switch (node.data.type) {
+  const minimapNodeColor = useCallback((node: Node) => {
+    if (node.type === 'label-connector') return '#10b981' // emerald for label connectors
+
+    const data = node.data as Record<string, unknown>
+    const gateType = data.type as string | undefined
+    switch (gateType) {
       case 'TOGGLE':
       case 'CLOCK':
       case 'PULSE':
@@ -97,6 +129,7 @@ export function CircuitCanvas() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeDoubleClick={handleNodeDoubleClick}
         onSelectionChange={handleSelectionChange}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}

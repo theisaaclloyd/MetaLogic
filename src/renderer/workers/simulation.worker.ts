@@ -157,6 +157,24 @@ self.onmessage = (e: MessageEvent<WorkerMessage>) => {
       break
     }
 
+    case 'setKeypadValue': {
+      if (engine) {
+        engine.setKeypadValue(message.gateId, message.value)
+        engine.step(1)
+        sendStateUpdate()
+      }
+      break
+    }
+
+    case 'setMemoryData': {
+      if (engine) {
+        engine.setMemoryData(message.gateId, message.memory)
+        engine.step(1)
+        sendStateUpdate()
+      }
+      break
+    }
+
     case 'setSpeed': {
       msPerTick = Math.max(1, Math.min(1000, message.msPerTick))
       break

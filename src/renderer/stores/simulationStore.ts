@@ -25,6 +25,8 @@ interface SimulationState {
   initializeSimulation: (gates: GateState[], wires: WireState[]) => void
   toggleInput: (gateId: string) => void
   triggerPulse: (gateId: string) => void
+  setKeypadValue: (gateId: string, value: number) => void
+  setMemoryData: (gateId: string, memory: Record<string, number[]>) => void
 
   setWorker: (worker: Worker | null) => void
 }
@@ -97,6 +99,20 @@ export const useSimulationStore = create<SimulationState>()(
       const { worker } = get()
       if (worker) {
         worker.postMessage({ type: 'triggerPulse', gateId })
+      }
+    },
+
+    setKeypadValue: (gateId, value) => {
+      const { worker } = get()
+      if (worker) {
+        worker.postMessage({ type: 'setKeypadValue', gateId, value })
+      }
+    },
+
+    setMemoryData: (gateId, memory) => {
+      const { worker } = get()
+      if (worker) {
+        worker.postMessage({ type: 'setMemoryData', gateId, memory })
       }
     },
 

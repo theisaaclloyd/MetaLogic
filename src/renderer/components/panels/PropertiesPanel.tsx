@@ -1,4 +1,11 @@
-import { useCircuitStore, type GateNode, type WireEdge } from '../../stores/circuitStore'
+import { useCallback } from 'react'
+import {
+  useCircuitStore,
+  type GateNode,
+  type WireEdge,
+  type CircuitNode,
+  type LabelConnectorNodeData
+} from '../../stores/circuitStore'
 import { StateType } from '../../simulation/types/state'
 
 const STATE_NAMES: Record<StateType, string> = {
@@ -10,12 +17,19 @@ const STATE_NAMES: Record<StateType, string> = {
 }
 
 export function PropertiesPanel() {
-  const { nodes, edges, selectedNodeIds, selectedEdgeIds, updateGateParams } = useCircuitStore()
+  const { nodes, edges, selectedNodeIds, selectedEdgeIds, updateGateParams, renameLabelConnector } =
+    useCircuitStore()
 
   const selectedNodes = nodes.filter((n) => selectedNodeIds.includes(n.id))
   const selectedEdges = edges.filter((e) => selectedEdgeIds.includes(e.id))
 
   const hasSelection = selectedNodes.length > 0 || selectedEdges.length > 0
+
+  // Count label connectors and gates separately
+  const labelConnectorCount = nodes.filter((n) => n.type === 'label-connector').length
+  const gateCount = nodes.filter((n) => n.type === 'gate').length
+  const signalWireCount = edges.filter((e) => e.type !== 'label-link').length
+  const labelLinkCount = edges.filter((e) => e.type === 'label-link').length
 
   return (
     <div className="w-64 bg-gray-800 border-l border-gray-700 overflow-y-auto">
@@ -28,12 +42,23 @@ export function PropertiesPanel() {
           </p>
         )}
 
-        {selectedNodes.length === 1 && selectedNodes[0] && (
-          <GateProperties
-            node={selectedNodes[0]}
-            onParamChange={(key, value) => updateGateParams(selectedNodes[0]!.id, { [key]: value })}
-          />
-        )}
+        {selectedNodes.length === 1 &&
+          selectedNodes[0] &&
+          (selectedNodes[0].type === 'label-connector' ? (
+            <LabelConnectorProperties
+              node={selectedNodes[0] as CircuitNode}
+              edges={edges}
+              nodes={nodes as CircuitNode[]}
+              onRename={(newLabel) => renameLabelConnector(selectedNodes[0]!.id, newLabel)}
+            />
+          ) : (
+            <GateProperties
+              node={selectedNodes[0] as GateNode}
+              onParamChange={(key, value) =>
+                updateGateParams(selectedNodes[0]!.id, { [key]: value })
+              }
+            />
+          ))}
 
         {selectedNodes.length > 1 && (
           <div className="text-xs text-gray-400">{selectedNodes.length} components selected</div>
@@ -56,12 +81,24 @@ export function PropertiesPanel() {
         <div className="space-y-1 text-xs text-gray-400">
           <div className="flex justify-between">
             <span>Gates:</span>
-            <span className="text-gray-300">{nodes.length}</span>
+            <span className="text-gray-300">{gateCount}</span>
           </div>
           <div className="flex justify-between">
             <span>Wires:</span>
-            <span className="text-gray-300">{edges.length}</span>
+            <span className="text-gray-300">{signalWireCount}</span>
           </div>
+          {labelConnectorCount > 0 && (
+            <>
+              <div className="flex justify-between">
+                <span>Label connectors:</span>
+                <span className="text-emerald-400">{labelConnectorCount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Label links:</span>
+                <span className="text-emerald-400">{labelLinkCount}</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -150,6 +187,112 @@ function GateProperties({ node, onParamChange }: GatePropertiesProps) {
           />
         </div>
       )}
+    </div>
+  )
+}
+
+interface LabelConnectorPropertiesProps {
+  node: CircuitNode
+  edges: {
+    id: string
+    source: string
+    target: string
+    type?: string
+    sourceHandle?: string | null
+    targetHandle?: string | null
+  }[]
+  nodes: CircuitNode[]
+  onRename: (newLabel: string) => void
+}
+
+function LabelConnectorProperties({ node, edges, nodes, onRename }: LabelConnectorPropertiesProps) {
+  const lcData = node.data as LabelConnectorNodeData
+
+  const handleLabelChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onRename(e.target.value)
+    },
+    [onRename]
+  )
+
+  // Find connected gate from label-link edges
+  let connectedGateId = ''
+  let connectedPort = ''
+  for (const edge of edges) {
+    if (edge.type !== 'label-link') continue
+    if (lcData.isOutput && edge.target === node.id) {
+      connectedGateId = edge.source
+      connectedPort = edge.sourceHandle?.replace('output-', 'Out ') ?? ''
+      break
+    } else if (!lcData.isOutput && edge.source === node.id) {
+      connectedGateId = edge.target
+      connectedPort = edge.targetHandle?.replace('input-', 'In ') ?? ''
+      break
+    }
+  }
+
+  // Count matching connectors with same label
+  const matchingCount = nodes.filter(
+    (n) =>
+      n.type === 'label-connector' &&
+      (n.data as unknown as LabelConnectorNodeData).label === lcData.label
+  ).length
+
+  return (
+    <div className="space-y-3">
+      {/* Label Name */}
+      <div>
+        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Label Name
+        </label>
+        <input
+          type="text"
+          value={lcData.label}
+          onChange={handleLabelChange}
+          className="mt-1 w-full px-2 py-1 text-sm bg-gray-700 border border-gray-600 rounded text-emerald-300"
+          placeholder="Enter label name"
+        />
+      </div>
+
+      {/* Direction */}
+      <div>
+        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Direction
+        </label>
+        <div className="mt-1 text-sm text-emerald-400">
+          {lcData.isOutput ? 'Output (broadcasts)' : 'Input (receives)'}
+        </div>
+      </div>
+
+      {/* ID */}
+      <div>
+        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">ID</label>
+        <div className="mt-1 text-sm text-gray-400 font-mono">{node.id}</div>
+      </div>
+
+      {/* Connected Gate */}
+      <div>
+        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Connected To
+        </label>
+        <div className="mt-1 text-sm text-gray-400">
+          {connectedGateId ? (
+            <span className="font-mono">
+              {connectedGateId} {connectedPort}
+            </span>
+          ) : (
+            <span className="text-gray-500 italic">Not connected</span>
+          )}
+        </div>
+      </div>
+
+      {/* Matching Count */}
+      <div>
+        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Matching Connectors
+        </label>
+        <div className="mt-1 text-sm text-gray-300">{matchingCount}</div>
+      </div>
     </div>
   )
 }

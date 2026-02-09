@@ -65,6 +65,8 @@ export type WorkerMessage =
   | { type: 'removeWire'; wireId: IDType }
   | { type: 'getState' }
   | { type: 'setSpeed'; msPerTick: number }
+  | { type: 'setKeypadValue'; gateId: IDType; value: number }
+  | { type: 'setMemoryData'; gateId: IDType; memory: Record<string, number[]> }
 
 export type WorkerResponse =
   | { type: 'stateUpdate'; gates: GateState[]; wires: WireState[]; time: TimeType }

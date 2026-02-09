@@ -1,9 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { CircuitData } from '@shared/types/circuit'
+import type { CircuitData, ParseWarning } from '@shared/types/circuit'
 
 export interface ElectronAPI {
   file: {
-    open: () => Promise<{ filePath: string; circuit: CircuitData } | null>
+    open: () => Promise<{ filePath: string; circuit: CircuitData; warnings: ParseWarning[] } | null>
     save: (data: {
       filePath: string
       circuit: CircuitData
@@ -14,6 +14,7 @@ export interface ElectronAPI {
       filePath: string
       content: string
     }) => Promise<{ success: boolean; error?: string }>
+    openMemory: () => Promise<{ filePath: string; content: string } | null>
   }
   onMenuCommand: (callback: (command: string) => void) => () => void
 }
@@ -24,7 +25,8 @@ const electronAPI: ElectronAPI = {
     save: (data) => ipcRenderer.invoke('file:save', data),
     saveAs: (circuit) => ipcRenderer.invoke('file:save-as', circuit),
     read: (filePath) => ipcRenderer.invoke('file:read', filePath),
-    write: (data) => ipcRenderer.invoke('file:write', data)
+    write: (data) => ipcRenderer.invoke('file:write', data),
+    openMemory: () => ipcRenderer.invoke('file:openMemory')
   },
   onMenuCommand: (callback) => {
     const handlers: { channel: string; handler: () => void }[] = [

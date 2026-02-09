@@ -297,7 +297,14 @@ class RomGate extends Gate {
   private dataWidth: number
 
   constructor(id: IDType, type: string, dataWidth: number, config?: GateConfig) {
-    super({ id, type, inputCount: 5, outputCount: dataWidth, delay: config?.delay ?? 1, params: config?.params })
+    super({
+      id,
+      type,
+      inputCount: 5,
+      outputCount: dataWidth,
+      delay: config?.delay ?? 1,
+      params: config?.params
+    })
     this.dataWidth = dataWidth
     // Initialize memory from params or empty
     const paramMemory = config?.params?.['memory'] as Record<string, StateType[]> | undefined

@@ -9,7 +9,13 @@ import {
   applyNodeChanges,
   applyEdgeChanges
 } from '@xyflow/react'
-import type { GateData, WireData, CircuitData, Position } from '@shared/types/circuit'
+import type {
+  GateData,
+  WireData,
+  CircuitData,
+  Position,
+  LabelConnectorData
+} from '@shared/types/circuit'
 import { StateType } from '../simulation/types/state'
 
 export interface GateNodeData {
@@ -21,7 +27,16 @@ export interface GateNodeData {
   inputStates: StateType[]
   outputStates: StateType[]
   params: Record<string, unknown>
+  internalState?: Record<string, unknown>
 }
+
+export interface LabelConnectorNodeData {
+  [key: string]: unknown
+  label: string
+  isOutput: boolean
+}
+
+export type CircuitNodeData = GateNodeData | LabelConnectorNodeData
 
 export interface WireEdgeData {
   [key: string]: unknown
@@ -29,11 +44,14 @@ export interface WireEdgeData {
 }
 
 export type GateNode = Node<GateNodeData>
+export type LabelConnectorNode = Node<LabelConnectorNodeData>
+// Unified node type used throughout the store
+export type CircuitNode = Node<CircuitNodeData>
 export type WireEdge = Edge<WireEdgeData>
 
 interface CircuitState {
   // React Flow state
-  nodes: GateNode[]
+  nodes: CircuitNode[]
   edges: WireEdge[]
 
   // File state
@@ -45,7 +63,7 @@ interface CircuitState {
   selectedEdgeIds: string[]
 
   // Actions
-  onNodesChange: (changes: NodeChange<GateNode>[]) => void
+  onNodesChange: (changes: NodeChange<CircuitNode>[]) => void
   onEdgesChange: (changes: EdgeChange<WireEdge>[]) => void
   onConnect: (connection: Connection) => void
 
@@ -53,6 +71,9 @@ interface CircuitState {
   removeGate: (id: string) => void
   updateGatePosition: (id: string, position: Position) => void
   updateGateParams: (id: string, params: Record<string, unknown>) => void
+
+  addLabelConnector: (label: string, isOutput: boolean, position: Position) => string
+  renameLabelConnector: (id: string, newLabel: string) => void
 
   addWire: (
     sourceId: string,
@@ -62,7 +83,12 @@ interface CircuitState {
   ) => string | null
   removeWire: (id: string) => void
 
-  updateGateState: (gateId: string, inputStates: StateType[], outputStates: StateType[]) => void
+  updateGateState: (
+    gateId: string,
+    inputStates: StateType[],
+    outputStates: StateType[],
+    internalState?: Record<string, unknown>
+  ) => void
   updateWireState: (wireId: string, state: StateType) => void
 
   setSelection: (nodeIds: string[], edgeIds: string[]) => void
@@ -92,6 +118,9 @@ const GATE_CONFIGS: Record<string, { inputs: number; outputs: number; label: str
   CLOCK: { inputs: 0, outputs: 1, label: 'CLK' },
   PULSE: { inputs: 0, outputs: 1, label: 'PLS' },
   LED: { inputs: 1, outputs: 0, label: 'LED' },
+  DISPLAY_1D: { inputs: 4, outputs: 0, label: '1D' },
+  DISPLAY_2D: { inputs: 8, outputs: 0, label: '2D' },
+  KEYPAD: { inputs: 0, outputs: 4, label: 'KEY' },
   D_FLIPFLOP: { inputs: 2, outputs: 2, label: 'D-FF' },
   JK_FLIPFLOP: { inputs: 3, outputs: 2, label: 'JK-FF' },
   // Multiplexers
@@ -127,6 +156,7 @@ const GATE_CONFIGS: Record<string, { inputs: number; outputs: number; label: str
 
 let nodeIdCounter = 1
 let edgeIdCounter = 1
+let labelConnectorIdCounter = 1
 
 function generateNodeId(): string {
   return `gate_${nodeIdCounter++}`
@@ -134,6 +164,14 @@ function generateNodeId(): string {
 
 function generateEdgeId(): string {
   return `wire_${edgeIdCounter++}`
+}
+
+function generateLabelConnectorId(): string {
+  return `lc_${labelConnectorIdCounter++}`
+}
+
+function isLabelConnectorNode(node: CircuitNode): boolean {
+  return node.type === 'label-connector'
 }
 
 export const useCircuitStore = create<CircuitState>()(
@@ -160,11 +198,47 @@ export const useCircuitStore = create<CircuitState>()(
     },
 
     onConnect: (connection) => {
-      const { addWire } = get()
-      if (connection.source && connection.target) {
+      if (!connection.source || !connection.target) return
+
+      const { nodes } = get()
+      const sourceNode = nodes.find((n) => n.id === connection.source)
+      const targetNode = nodes.find((n) => n.id === connection.target)
+
+      if (!sourceNode || !targetNode) return
+
+      const isLabelLink = isLabelConnectorNode(sourceNode) || isLabelConnectorNode(targetNode)
+
+      if (isLabelLink) {
+        // Create a label-link edge
+        const state = get()
+        const exists = state.edges.some(
+          (e) =>
+            e.source === connection.source &&
+            e.target === connection.target &&
+            e.sourceHandle === connection.sourceHandle &&
+            e.targetHandle === connection.targetHandle
+        )
+        if (exists) return
+
+        const id = generateEdgeId()
+        const newEdge: WireEdge = {
+          id,
+          source: connection.source,
+          target: connection.target,
+          sourceHandle: connection.sourceHandle ?? undefined,
+          targetHandle: connection.targetHandle ?? undefined,
+          type: 'label-link',
+          data: { state: StateType.UNKNOWN }
+        }
+        set((state) => ({
+          edges: [...state.edges, newEdge],
+          isDirty: true
+        }))
+      } else {
+        // Regular wire connection
         const sourcePort = parseInt(connection.sourceHandle?.replace('output-', '') ?? '0')
         const targetPort = parseInt(connection.targetHandle?.replace('input-', '') ?? '0')
-        addWire(connection.source, sourcePort, connection.target, targetPort)
+        get().addWire(connection.source, sourcePort, connection.target, targetPort)
       }
     },
 
@@ -176,7 +250,7 @@ export const useCircuitStore = create<CircuitState>()(
       }
 
       const id = generateNodeId()
-      const newNode: GateNode = {
+      const newNode: CircuitNode = {
         id,
         type: 'gate',
         position,
@@ -188,7 +262,7 @@ export const useCircuitStore = create<CircuitState>()(
           inputStates: Array<StateType>(config.inputs).fill(StateType.UNKNOWN),
           outputStates: Array<StateType>(config.outputs).fill(StateType.UNKNOWN),
           params: {}
-        }
+        } as GateNodeData
       }
 
       set((state) => ({
@@ -197,6 +271,37 @@ export const useCircuitStore = create<CircuitState>()(
       }))
 
       return id
+    },
+
+    addLabelConnector: (label, isOutput, position) => {
+      const id = generateLabelConnectorId()
+      const newNode: CircuitNode = {
+        id,
+        type: 'label-connector',
+        position,
+        data: {
+          label,
+          isOutput
+        } as LabelConnectorNodeData
+      }
+
+      set((state) => ({
+        nodes: [...state.nodes, newNode],
+        isDirty: true
+      }))
+
+      return id
+    },
+
+    renameLabelConnector: (id, newLabel) => {
+      set((state) => ({
+        nodes: state.nodes.map((n) =>
+          n.id === id && n.type === 'label-connector'
+            ? ({ ...n, data: { ...n.data, label: newLabel } } as CircuitNode)
+            : n
+        ),
+        isDirty: true
+      }))
     },
 
     removeGate: (id) => {
@@ -217,7 +322,12 @@ export const useCircuitStore = create<CircuitState>()(
     updateGateParams: (id, params) => {
       set((state) => ({
         nodes: state.nodes.map((n) =>
-          n.id === id ? { ...n, data: { ...n.data, params: { ...n.data.params, ...params } } } : n
+          n.id === id && n.type === 'gate'
+            ? ({
+                ...n,
+                data: { ...n.data, params: { ...(n.data as GateNodeData).params, ...params } }
+              } as CircuitNode)
+            : n
         ),
         isDirty: true
       }))
@@ -264,10 +374,20 @@ export const useCircuitStore = create<CircuitState>()(
       }))
     },
 
-    updateGateState: (gateId, inputStates, outputStates) => {
+    updateGateState: (gateId, inputStates, outputStates, internalState?) => {
       set((state) => ({
         nodes: state.nodes.map((n) =>
-          n.id === gateId ? { ...n, data: { ...n.data, inputStates, outputStates } } : n
+          n.id === gateId && n.type === 'gate'
+            ? ({
+                ...n,
+                data: {
+                  ...n.data,
+                  inputStates,
+                  outputStates,
+                  ...(internalState !== undefined ? { internalState } : {})
+                }
+              } as CircuitNode)
+            : n
         )
       }))
     },
@@ -304,6 +424,7 @@ export const useCircuitStore = create<CircuitState>()(
     newCircuit: () => {
       nodeIdCounter = 1
       edgeIdCounter = 1
+      labelConnectorIdCounter = 1
       set({
         nodes: [],
         edges: [],
@@ -318,8 +439,9 @@ export const useCircuitStore = create<CircuitState>()(
       // Reset counters
       nodeIdCounter = 1
       edgeIdCounter = 1
+      labelConnectorIdCounter = 1
 
-      const nodes: GateNode[] = circuit.gates.map((gate) => {
+      const nodes: CircuitNode[] = circuit.gates.map((gate) => {
         const config = GATE_CONFIGS[gate.type] ?? { inputs: 2, outputs: 1, label: gate.type }
         const id = gate.id
         const numId = parseInt(id.replace(/\D/g, ''))
@@ -327,20 +449,28 @@ export const useCircuitStore = create<CircuitState>()(
           nodeIdCounter = numId + 1
         }
 
+        // Respect _inputCount/_outputCount overrides from CDL parser
+        const inputCount = gate.params['_inputCount']
+          ? parseInt(gate.params['_inputCount'])
+          : config.inputs
+        const outputCount = gate.params['_outputCount']
+          ? parseInt(gate.params['_outputCount'])
+          : config.outputs
+
         return {
           id,
-          type: 'gate',
+          type: 'gate' as const,
           position: gate.position,
           data: {
             type: gate.type,
             label: config.label,
-            inputCount: config.inputs,
-            outputCount: config.outputs,
-            inputStates: Array<StateType>(config.inputs).fill(StateType.UNKNOWN),
-            outputStates: Array<StateType>(config.outputs).fill(StateType.UNKNOWN),
+            inputCount,
+            outputCount,
+            inputStates: Array<StateType>(inputCount).fill(StateType.UNKNOWN),
+            outputStates: Array<StateType>(outputCount).fill(StateType.UNKNOWN),
             params: gate.params
-          }
-        }
+          } as GateNodeData
+        } as CircuitNode
       })
 
       const edges: WireEdge[] = circuit.wires.map((wire) => {
@@ -356,12 +486,61 @@ export const useCircuitStore = create<CircuitState>()(
           target: wire.targetGateId,
           sourceHandle: `output-${wire.sourcePortIndex}`,
           targetHandle: `input-${wire.targetPortIndex}`,
-          type: 'wire',
+          type: 'wire' as const,
           data: {
             state: StateType.UNKNOWN
           }
         }
       })
+
+      // Load label connectors
+      if (circuit.labelConnectors && circuit.labelConnectors.length > 0) {
+        for (const lc of circuit.labelConnectors) {
+          const numId = parseInt(lc.id.replace(/\D/g, ''))
+          if (!isNaN(numId) && numId >= labelConnectorIdCounter) {
+            labelConnectorIdCounter = numId + 1
+          }
+
+          const lcNode: CircuitNode = {
+            id: lc.id,
+            type: 'label-connector',
+            position: lc.position,
+            data: {
+              label: lc.label,
+              isOutput: lc.isOutput
+            } as LabelConnectorNodeData
+          }
+          nodes.push(lcNode)
+
+          // Create label-link edge connecting the connector to its gate port
+          if (lc.connectedGateId) {
+            const linkId = generateEdgeId()
+            if (lc.isOutput) {
+              // Output connector: gate output → label connector (target handle)
+              edges.push({
+                id: linkId,
+                source: lc.connectedGateId,
+                target: lc.id,
+                sourceHandle: `output-${lc.connectedPortIndex}`,
+                targetHandle: 'target',
+                type: 'label-link',
+                data: { state: StateType.UNKNOWN }
+              })
+            } else {
+              // Input connector: label connector (source handle) → gate input
+              edges.push({
+                id: linkId,
+                source: lc.id,
+                target: lc.connectedGateId,
+                sourceHandle: 'source',
+                targetHandle: `input-${lc.connectedPortIndex}`,
+                type: 'label-link',
+                data: { state: StateType.UNKNOWN }
+              })
+            }
+          }
+        }
+      }
 
       set({
         nodes,
@@ -376,16 +555,24 @@ export const useCircuitStore = create<CircuitState>()(
     getCircuitData: (): CircuitData => {
       const { nodes, edges } = get()
 
-      const gates: GateData[] = nodes.map((node) => ({
+      // Partition nodes into gates vs label connectors
+      const gateNodes = nodes.filter((n) => n.type === 'gate')
+      const lcNodes = nodes.filter((n) => n.type === 'label-connector')
+
+      // Partition edges into signal wires vs label-links
+      const signalEdges = edges.filter((e) => e.type !== 'label-link')
+      const labelLinkEdges = edges.filter((e) => e.type === 'label-link')
+
+      const gates: GateData[] = gateNodes.map((node) => ({
         id: node.id,
-        type: node.data.type,
+        type: (node.data as GateNodeData).type,
         position: node.position,
         inputs: [],
         outputs: [],
-        params: node.data.params as Record<string, string>
+        params: (node.data as GateNodeData).params as Record<string, string>
       }))
 
-      const wires: WireData[] = edges.map((edge) => ({
+      const wires: WireData[] = signalEdges.map((edge) => ({
         id: edge.id,
         sourceGateId: edge.source,
         sourcePortIndex: parseInt(edge.sourceHandle?.replace('output-', '') ?? '0'),
@@ -394,10 +581,44 @@ export const useCircuitStore = create<CircuitState>()(
         points: []
       }))
 
+      // Extract label connector data by resolving connected gate/port from label-link edges
+      const labelConnectors: LabelConnectorData[] = lcNodes.map((node) => {
+        const lcData = node.data as LabelConnectorNodeData
+
+        // Find the label-link edge connecting this connector to a gate
+        let connectedGateId = ''
+        let connectedPortIndex = 0
+
+        for (const edge of labelLinkEdges) {
+          if (lcData.isOutput && edge.target === node.id) {
+            // Output connector: gate output → connector
+            connectedGateId = edge.source
+            connectedPortIndex = parseInt(edge.sourceHandle?.replace('output-', '') ?? '0')
+            break
+          } else if (!lcData.isOutput && edge.source === node.id) {
+            // Input connector: connector → gate input
+            connectedGateId = edge.target
+            connectedPortIndex = parseInt(edge.targetHandle?.replace('input-', '') ?? '0')
+            break
+          }
+        }
+
+        return {
+          id: node.id,
+          label: lcData.label,
+          isOutput: lcData.isOutput,
+          position: node.position,
+          connectedGateId,
+          connectedPortIndex
+        }
+      })
+
       return {
+        format: 'metalogic',
         version: '1.0.0',
         gates,
-        wires
+        wires,
+        labelConnectors: labelConnectors.length > 0 ? labelConnectors : undefined
       }
     },
 

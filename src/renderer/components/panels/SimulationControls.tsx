@@ -116,7 +116,9 @@ export function SimulationControls() {
       </div>
 
       {/* Time Display */}
-      <div className="ml-2 text-xs text-gray-400 w-16 text-right tabular-nums">t={formatTime(currentTime)}</div>
+      <div className="ml-2 text-xs text-gray-400 w-16 text-right tabular-nums">
+        t={formatTime(currentTime)}
+      </div>
     </div>
   )
 }

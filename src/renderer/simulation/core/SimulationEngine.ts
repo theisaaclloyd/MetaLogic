@@ -8,7 +8,7 @@ import {
 import { EventQueue } from './EventQueue'
 import { resolveWireState } from './WireResolver'
 import { Gate } from '../gates/Gate'
-import { createGate, ClockGate, PulseGate, ToggleGate } from '../gates/BasicGates'
+import { createGate, ClockGate, PulseGate, ToggleGate, KeypadGate } from '../gates/BasicGates'
 import { createSequentialGate } from '../gates/SequentialGates'
 import { createCombinationalGate } from '../gates/CombinationalGates'
 import { createMemoryGate } from '../gates/MemoryGates'
@@ -119,16 +119,29 @@ export class SimulationEngine {
   private createGateFromState(gateState: GateState): Gate {
     const sequentialTypes = ['D_FLIPFLOP', 'D_FLIPFLOP_SR', 'JK_FLIPFLOP', 'JK_FLIPFLOP_SR']
     const combinationalTypes = [
-      'MUX_2TO1', 'MUX_4TO1', 'MUX_8TO1',
-      'DEMUX_1TO2', 'DEMUX_1TO4',
-      'DECODER_2TO4', 'DECODER_3TO8',
-      'ENCODER_4TO2', 'ENCODER_8TO3',
-      'FULL_ADDER', 'ADDER_4BIT',
-      'COMPARATOR_1BIT', 'COMPARATOR_4BIT'
+      'MUX_2TO1',
+      'MUX_4TO1',
+      'MUX_8TO1',
+      'DEMUX_1TO2',
+      'DEMUX_1TO4',
+      'DECODER_2TO4',
+      'DECODER_3TO8',
+      'ENCODER_4TO2',
+      'ENCODER_8TO3',
+      'FULL_ADDER',
+      'ADDER_4BIT',
+      'COMPARATOR_1BIT',
+      'COMPARATOR_4BIT'
     ]
     const memoryTypes = [
-      'REGISTER_4BIT', 'REGISTER_8BIT', 'SHIFT_REG_4BIT', 'COUNTER_4BIT',
-      'RAM_16X4', 'RAM_16X8', 'ROM_16X4', 'ROM_16X8'
+      'REGISTER_4BIT',
+      'REGISTER_8BIT',
+      'SHIFT_REG_4BIT',
+      'COUNTER_4BIT',
+      'RAM_16X4',
+      'RAM_16X8',
+      'ROM_16X4',
+      'ROM_16X8'
     ]
 
     let gate: Gate
@@ -284,6 +297,17 @@ export class SimulationEngine {
   }
 
   /**
+   * Set a keypad's value
+   */
+  setKeypadValue(gateId: IDType, value: number): void {
+    const gate = this.gates.get(gateId)
+    if (gate instanceof KeypadGate) {
+      gate.setValue(value)
+      this.scheduleGateEvaluation(gateId, this.currentTime)
+    }
+  }
+
+  /**
    * Trigger a pulse button
    */
   triggerPulse(gateId: IDType): void {
@@ -292,6 +316,20 @@ export class SimulationEngine {
       gate.trigger(this.currentTime)
       this.scheduleGateEvaluation(gateId, this.currentTime)
     }
+  }
+
+  /**
+   * Set memory data for a RAM/ROM gate
+   */
+  setMemoryData(gateId: IDType, memory: Record<string, number[]>): void {
+    const gate = this.gates.get(gateId)
+    if (!gate) return
+    const memTypes = new Set(['RAM_16X4', 'RAM_16X8', 'ROM_16X4', 'ROM_16X8'])
+    if (!memTypes.has(gate.type)) return
+    const internalState = gate.getInternalState()
+    internalState['memory'] = memory
+    gate.setInternalState(internalState)
+    this.scheduleGateEvaluation(gateId, this.currentTime)
   }
 
   /**

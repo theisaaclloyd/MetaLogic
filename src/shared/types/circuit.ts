@@ -26,8 +26,36 @@ export interface WireData {
   points: Position[]
 }
 
+export interface LabelConnectorData {
+  id: string
+  label: string
+  isOutput: boolean
+  position: Position
+  connectedGateId: string
+  connectedPortIndex: number
+}
+
 export interface CircuitData {
+  format?: 'metalogic'
   version: string
   gates: GateData[]
   wires: WireData[]
+  labelConnectors?: LabelConnectorData[]
+}
+
+export interface ParseWarning {
+  type:
+    | 'unsupported_gate'
+    | 'approximate_mapping'
+    | 'missing_connection'
+    | 'label_conflict'
+    | 'import_info'
+  gateId?: string
+  gateType?: string
+  message: string
+}
+
+export interface ParseResult {
+  circuit: CircuitData
+  warnings: ParseWarning[]
 }

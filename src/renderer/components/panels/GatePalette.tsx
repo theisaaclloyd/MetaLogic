@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { GATE_SYMBOLS } from '../icons/GateSymbols'
+import { GATE_PALETTE_ICONS } from '../icons/GateSymbols'
 
 interface GateCategory {
   name: string
@@ -12,12 +12,32 @@ const GATE_CATEGORIES: GateCategory[] = [
     gates: [
       { type: 'TOGGLE', label: 'Switch', description: 'Toggle switch input' },
       { type: 'CLOCK', label: 'Clock', description: 'Clock signal generator' },
-      { type: 'PULSE', label: 'Pulse', description: 'Momentary pulse button' }
+      { type: 'PULSE', label: 'Pulse', description: 'Momentary pulse button' },
+      { type: 'KEYPAD', label: 'Keypad', description: '4x4 keypad - outputs 4-bit binary (0-15)' }
+    ]
+  },
+  {
+    name: 'Connectors',
+    gates: [
+      { type: 'LABEL_OUT', label: 'Label Out', description: 'Broadcasts signal by label name' },
+      { type: 'LABEL_IN', label: 'Label In', description: 'Receives signal by label name' }
     ]
   },
   {
     name: 'Outputs',
-    gates: [{ type: 'LED', label: 'LED', description: 'LED indicator' }]
+    gates: [
+      { type: 'LED', label: 'LED', description: 'LED indicator' },
+      {
+        type: 'DISPLAY_1D',
+        label: '1-Digit',
+        description: '1-digit decimal display (4-bit, 0-15)'
+      },
+      {
+        type: 'DISPLAY_2D',
+        label: '2-Digit',
+        description: '2-digit decimal display (8-bit, 0-255)'
+      }
+    ]
   },
   {
     name: 'Basic Gates',
@@ -128,13 +148,17 @@ function GateItem({
 }) {
   const handleDragStart = useCallback(
     (event: React.DragEvent) => {
-      event.dataTransfer.setData('application/metalogic-gate', type)
+      if (type === 'LABEL_OUT' || type === 'LABEL_IN') {
+        event.dataTransfer.setData('application/metalogic-label-connector', type)
+      } else {
+        event.dataTransfer.setData('application/metalogic-gate', type)
+      }
       event.dataTransfer.effectAllowed = 'copy'
     },
     [type]
   )
 
-  const Symbol = GATE_SYMBOLS[type]
+  const Symbol = GATE_PALETTE_ICONS[type]
 
   return (
     <div
